@@ -1,4 +1,7 @@
-insert into silver.timesheets(client_employee_id,department_id,department_name,home_department_id,home_department_name,pay_code,punch_in_comment,punch_out_comment,hours_worked,punch_apply_date,punch_in_datetime,punch_out_datetime,scheduled_start_datetime,scheduled_end_datetime,loaded_at,source_file)
+insert into silver.timesheets(client_employee_id,department_id,department_name,
+	home_department_id,home_department_name,pay_code,punch_in_comment,punch_out_comment,
+	hours_worked,punch_apply_date,punch_in_datetime,punch_out_datetime,scheduled_start_datetime,
+	scheduled_end_datetime,loaded_at,source_file)	
 with remove_non_valid_employee_data as (
 select 
 	t.* 
@@ -30,7 +33,7 @@ from remove_empty_punch_data
 casted_data as (
     select  
         client_employee_id,
-        department_id
+        department_id,
         department_name,
         home_department_id ,
         home_department_name,

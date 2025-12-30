@@ -351,9 +351,9 @@ def main():
     
     base_dir = Path(__file__).resolve().parents[2]
     schema_dir = base_dir / "sql" / "create_table_queries"
+    transform_dir=base_dir / "sql" /"transform_queries"
     data_dir = base_dir / "data"
     
-    # Initialize database schema
     logger.info("Step 1: Initializing database schema...")
     if not init_schema(schema_dir):
         logger.error("Schema initialization failed. Aborting.")
@@ -366,6 +366,11 @@ def main():
     #     sys.exit(1)
     
     # logger.info("Bronze layer load completed successfully!")
+
+    logger.info("Step 3: Transforming bronze to silver")
+    if not transform_bronze_to_silver(transform_dir):
+        logger.error("Transformtaion for bronze to silver failed")
+        sys.exit(1)
 
     sys.exit(0)
 
