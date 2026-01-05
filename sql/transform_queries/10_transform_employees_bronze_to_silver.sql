@@ -16,11 +16,13 @@ select
 	organization_id,
 	organization_name,
 	department_id,
-	department_name,
+	TRIM(
+        REGEXP_REPLACE(department_name, '^' || department_id || '\s*-\s*', '', 'i')
+    ) as department_name,
 	dob:: date,
 	hire_date:: date,
 	recent_hire_date:: date,
-	anniversary_date:: date,
+	(recent_hire_date::date + interval '1 year')::date as anniversary_date,
 	nullif(term_date,''):: date,
 	nullif(years_of_experience,''):: numeric(4,1),
 	work_email,

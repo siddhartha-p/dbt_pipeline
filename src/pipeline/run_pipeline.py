@@ -58,18 +58,30 @@ def init_schema(schema_dir: Path) -> bool:
             conn.close()
 
 
-def truncate_bronze() -> bool:
-    logger.info("=== Truncating Bronze Tables ===")
+def truncate_all_layers() -> bool:
+    """Truncate all tables in bronze, silver, and gold schemas."""
+    logger.info("=== Truncating All Layers (Bronze, Silver, Gold) ===")
     conn = connect_db()
     if not conn:
         return False
     
     try:
         with conn.cursor() as cur:
-            cur.execute("TRUNCATE TABLE bronze.employees, bronze.timesheets CASCADE")
+            # Truncate in reverse dependency order: gold → silver → bronze
+            cur.execute("""
+                TRUNCATE TABLE 
+                    gold.fact_attendance,
+                    gold.dim_employees,
+                    gold.dim_date,
+                    silver.employees,
+                    silver.timesheets,
+                    bronze.employees,
+                    bronze.timesheets
+                CASCADE;
+            """)
             conn.commit()
         
-        logger.info("Bronze tables truncated")
+        logger.info("All layers truncated successfully")
         return True
         
     except Exception as e:
@@ -197,10 +209,10 @@ def transform_silver_to_gold(sql_dir: Path) -> bool:
     try:
         gold_dir = sql_dir / "gold" / "transformations"
         
-        # TODO: Add Gold transformation files
-        sql_files = [ (sql_dir / "30_transform_dim_date.sql", "Transform Dates"),
-            (sql_dir / "40_transform_dim_employees.sql", "Employees Dimension Table"),
-            (sql_dir / "50_transform_fact_attendance.sql", "Employees Dimension Table"),
+     
+        sql_files = [ (sql_dir / "30_transform_dim_date.sql", "Transformation Dim Dates Table"),
+            (sql_dir / "40_transform_dim_employees.sql", "Transformation Dim Employees Table"),
+            (sql_dir / "50_transform_fact_attendance.sql", "Transformation Fact Attendance Table"),
             ]
         
         if not sql_files:
@@ -232,47 +244,39 @@ def transform_silver_to_gold(sql_dir: Path) -> bool:
 
 
 def run_full_pipeline(truncate: bool = False) -> bool:
-    """
-    Run complete ELT pipeline.
-    
-    Args:
-        truncate: If True, truncate Bronze tables before loading
-    
-    Returns:
-        True if pipeline completes successfully
-    """
+
     logger.info("=" * 60)
     logger.info(f"Starting Full Pipeline (truncate={truncate})")
     logger.info("=" * 60)
     
     base_dir = Path(__file__).resolve().parents[2]
-    schema_dir = base_dir / "schema"
+    schema_dir = base_dir / "sql" / "create_table_queries"
     data_dir = base_dir / "data"
-    sql_dir = base_dir / "sql"
+    transform_dir = base_dir / "sql" /"transform_queries"
     
-    # Step 1: Initialize schema
+
     if not init_schema(schema_dir):
         logger.error("Pipeline aborted: Schema initialization failed")
         return False
     
-    # Step 2: Optional truncate
+
     if truncate:
-        if not truncate_bronze():
+        if not truncate_all_layers():
             logger.error("Pipeline aborted: Truncate failed")
             return False
     
-    # Step 3: Load Bronze
+
     if not load_bronze_layer(data_dir):
         logger.error("Pipeline failed: Bronze load incomplete")
         return False
     
-    # Step 4: Transform Bronze → Silver
-    if not transform_bronze_to_silver(sql_dir):
+  
+    if not transform_bronze_to_silver(transform_dir):
         logger.error("Pipeline failed: Silver transformation incomplete")
         return False
     
-    # Step 5: Transform Silver → Gold
-    if not transform_silver_to_gold(sql_dir):
+ 
+    if not transform_silver_to_gold(transform_dir):
         logger.error("Pipeline failed: Gold transformation incomplete")
         return False
     
@@ -282,32 +286,32 @@ def run_full_pipeline(truncate: bool = False) -> bool:
     return True
 
 
-# def run_incremental_load() -> bool:
-#     """Run incremental Bronze load + transformations (no truncate)."""
-#     logger.info("=" * 60)
-#     logger.info("Starting Incremental Load")
-#     logger.info("=" * 60)
+def run_incremental_load() -> bool:
+    """Run incremental Bronze load + transformations (no truncate)."""
+    logger.info("=" * 60)
+    logger.info("Starting Incremental Load")
+    logger.info("=" * 60)
     
-#     base_dir = Path(__file__).resolve().parents[2]
-#     data_dir = base_dir / "data"
-#     sql_dir = base_dir / "sql"
+    base_dir = Path(__file__).resolve().parents[2]
+    data_dir = base_dir / "data"
+    sql_dir = base_dir / "sql"
     
-#     # Load Bronze
-#     if not load_bronze_layer(data_dir):
-#         logger.error("Incremental load failed")
-#         return False
+    # Load Bronze
+    if not load_bronze_layer(data_dir):
+        logger.error("Incremental load failed")
+        return False
     
-#     # Run transformations (SQL watermarks handle incremental logic)
-#     if not transform_bronze_to_silver(sql_dir):
-#         logger.error("Silver transformation failed")
-#         return False
+    # Run transformations (SQL watermarks handle incremental logic)
+    if not transform_bronze_to_silver(sql_dir):
+        logger.error("Silver transformation failed")
+        return False
     
-#     if not transform_silver_to_gold(sql_dir):
-#         logger.error("Gold transformation failed")
-#         return False
+    if not transform_silver_to_gold(sql_dir):
+        logger.error("Gold transformation failed")
+        return False
     
-#     logger.info("Incremental load completed")
-#     return True
+    logger.info("Incremental load completed")
+    return True
 
 
 def main():
@@ -348,19 +352,19 @@ def main():
 
 ############### Test Script ####################
 
-    logger.info("=" * 60)
-    logger.info("Starting Bronze Layer Test Load")
-    logger.info("=" * 60)
+    # logger.info("=" * 60)
+    # logger.info("Starting Bronze Layer Test Load")
+    # logger.info("=" * 60)
     
-    base_dir = Path(__file__).resolve().parents[2]
-    schema_dir = base_dir / "sql" / "create_table_queries"
-    transform_dir=base_dir / "sql" /"transform_queries"
-    data_dir = base_dir / "data"
+    # base_dir = Path(__file__).resolve().parents[2]
+    # schema_dir = base_dir / "sql" / "create_table_queries"
+    # transform_dir=base_dir / "sql" /"transform_queries"
+    # data_dir = base_dir / "data"
     
-    logger.info("Step 1: Initializing database schema...")
-    if not init_schema(schema_dir):
-        logger.error("Schema initialization failed. Aborting.")
-        sys.exit(1)
+    # logger.info("Step 1: Initializing database schema...")
+    # if not init_schema(schema_dir):
+    #     logger.error("Schema initialization failed. Aborting.")
+    #     sys.exit(1)
     
     # Load Bronze layer
     # logger.info("Step 2: Loading CSV data into Bronze tables...")
@@ -375,10 +379,12 @@ def main():
     #     logger.error("Transformtaion for bronze to silver failed")
     #     sys.exit(1)
 
-    logger.info("Step 4: Transforming silver to gold")
-    if not transform_silver_to_gold(transform_dir):
-        logger.error("Transformtaion for gold to silver failed")
-        sys.exit(1)
+    # logger.info("Step 4: Transforming silver to gold")
+    # if not transform_silver_to_gold(transform_dir):
+    #     logger.error("Transformtaion for gold to silver failed")
+    #     sys.exit(1)
+    
+    run_full_pipeline(truncate=True)
 
     sys.exit(0)
 
