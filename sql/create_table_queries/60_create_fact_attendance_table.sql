@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS gold.fact_attendance (
-    client_employee_id VARCHAR(100) NOT NULL,
-    punch_apply_date date not null,
+    employee_key INTEGER NOT NULL,
+    date_key INTEGER not null,
     department_name VARCHAR(255),
     home_department_name VARCHAR(255),
     total_punches INTEGER NOT NULL,

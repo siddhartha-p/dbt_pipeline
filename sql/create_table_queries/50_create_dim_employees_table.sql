@@ -1,5 +1,6 @@
 CREATE table if not exists gold.dim_employees (
-	client_employee_id VARCHAR(100) primary key,
+	employee_key SERIAL PRIMARY KEY,
+	client_employee_id VARCHAR(100),
 	fullname VARCHAR(500) not null,
 	work_email VARCHAR(255),
 	dob date,
