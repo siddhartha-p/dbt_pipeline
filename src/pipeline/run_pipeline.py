@@ -59,15 +59,14 @@ def init_schema(schema_dir: Path) -> bool:
 
 
 def truncate_all_layers() -> bool:
-    """Truncate all tables in bronze, silver, and gold schemas."""
-    logger.info("=== Truncating All Layers (Bronze, Silver, Gold) ===")
+    
+    logger.info("=== Truncating All Layers ===")
     conn = connect_db()
     if not conn:
         return False
     
     try:
         with conn.cursor() as cur:
-            # Truncate in reverse dependency order: gold → silver → bronze
             cur.execute("""
                 TRUNCATE TABLE 
                     gold.fact_attendance,
@@ -76,7 +75,8 @@ def truncate_all_layers() -> bool:
                     silver.employees,
                     silver.timesheets,
                     bronze.employees,
-                    bronze.timesheets
+                    bronze.timesheets,
+                    bronze.processed_files
                 CASCADE;
             """)
             conn.commit()
@@ -99,7 +99,7 @@ def load_bronze_layer(data_dir: Path) -> bool:
     logger.info("=== Loading Bronze Layer ===")
     all_success = True
     
-    # Process all employee files
+    #these files are being extracted even if the the source file has already been processed
     emp_files = sorted(data_dir.glob("employee_*.csv"))
     if not emp_files:
         logger.warning("No employee CSV files found")
@@ -286,32 +286,32 @@ def run_full_pipeline(truncate: bool = False) -> bool:
     return True
 
 
-def run_incremental_load() -> bool:
-    """Run incremental Bronze load + transformations (no truncate)."""
-    logger.info("=" * 60)
-    logger.info("Starting Incremental Load")
-    logger.info("=" * 60)
+# def run_incremental_load() -> bool:
+#     """Run incremental Bronze load + transformations (no truncate)."""
+#     logger.info("=" * 60)
+#     logger.info("Starting Incremental Load")
+#     logger.info("=" * 60)
     
-    base_dir = Path(__file__).resolve().parents[2]
-    data_dir = base_dir / "data"
-    sql_dir = base_dir / "sql"
+#     base_dir = Path(__file__).resolve().parents[2]
+#     data_dir = base_dir / "data"
+#     sql_dir = base_dir / "sql"
     
-    # Load Bronze
-    if not load_bronze_layer(data_dir):
-        logger.error("Incremental load failed")
-        return False
+#     # Load Bronze
+#     if not load_bronze_layer(data_dir):
+#         logger.error("Incremental load failed")
+#         return False
     
-    # Run transformations (SQL watermarks handle incremental logic)
-    if not transform_bronze_to_silver(sql_dir):
-        logger.error("Silver transformation failed")
-        return False
+#     # Run transformations (SQL watermarks handle incremental logic)
+#     if not transform_bronze_to_silver(sql_dir):
+#         logger.error("Silver transformation failed")
+#         return False
     
-    if not transform_silver_to_gold(sql_dir):
-        logger.error("Gold transformation failed")
-        return False
+#     if not transform_silver_to_gold(sql_dir):
+#         logger.error("Gold transformation failed")
+#         return False
     
-    logger.info("Incremental load completed")
-    return True
+#     logger.info("Incremental load completed")
+#     return True
 
 
 def main():
