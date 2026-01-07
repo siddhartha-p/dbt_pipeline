@@ -47,7 +47,7 @@ def load_to_bronze(table_name: str, headers: list, rows: list, source_file: str)
                 VALUES (%s, %s, %s)
             """, (source_file, table_name, len(rows)))
 
-            conn.commit()                                            # look into .COPY as well in the future as it is faster
+            conn.commit()                                           
             
         logger.info(f"Successfully loaded {len(extended_rows)} rows into {table_name} from {source_file}")
         return True

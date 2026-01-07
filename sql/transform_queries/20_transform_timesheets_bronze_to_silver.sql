@@ -79,4 +79,23 @@ casted_data as (
         source_file
     from replace_null_strings 
 )
-select * from casted_data where punch_apply_date is not null and punch_in_datetime is not null and punch_out_datetime is not null;
+select * from casted_data 
+where punch_apply_date is not null 
+    and punch_in_datetime is not null 
+    and punch_out_datetime is not null
+    and loaded_at>(select coalesce(max(loaded_at),'2000-01-01'::timestamp) from silver.timesheets)
+ON CONFLICT (client_employee_id, punch_apply_date, punch_in_datetime)
+DO UPDATE SET
+    department_id = EXCLUDED.department_id,
+    department_name = EXCLUDED.department_name,
+    home_department_id = EXCLUDED.home_department_id,
+    home_department_name = EXCLUDED.home_department_name,
+    pay_code = EXCLUDED.pay_code,
+    punch_in_comment = EXCLUDED.punch_in_comment,
+    punch_out_comment = EXCLUDED.punch_out_comment,
+    hours_worked = EXCLUDED.hours_worked,
+    punch_out_datetime = EXCLUDED.punch_out_datetime,
+    scheduled_start_datetime = EXCLUDED.scheduled_start_datetime,
+    scheduled_end_datetime = EXCLUDED.scheduled_end_datetime,
+    loaded_at = EXCLUDED.loaded_at,
+    source_file = EXCLUDED.source_file

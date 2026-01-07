@@ -15,5 +15,6 @@ CREATE TABLE IF NOT EXISTS silver.timesheets (
     scheduled_start_datetime TIMESTAMP,
     scheduled_end_datetime TIMESTAMP,
     loaded_at TIMESTAMP NOT NULL,
-    source_file VARCHAR(500) NOT NULL
+    source_file VARCHAR(500) NOT NULL,
+    UNIQUE(client_employee_id, punch_apply_date, punch_in_datetime)
 )
