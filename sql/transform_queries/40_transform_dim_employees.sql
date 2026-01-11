@@ -34,4 +34,26 @@ select
 	end as is_early_attrition,
 	loaded_at,
 	source_file
-from silver.employees  ;
+from silver.employees  
+ON CONFLICT (client_employee_id) DO UPDATE SET
+    fullname = EXCLUDED.fullname,
+    work_email = EXCLUDED.work_email,
+    dob = EXCLUDED.dob,
+    years_of_experience = EXCLUDED.years_of_experience,
+    job_code = EXCLUDED.job_code,
+    job_title = EXCLUDED.job_title,
+    organization_name = EXCLUDED.organization_name,
+    department_name = EXCLUDED.department_name,
+    manager_employee_id = EXCLUDED.manager_employee_id,
+    job_start_date = EXCLUDED.job_start_date,
+    hire_date = EXCLUDED.hire_date,
+    recent_hire_date = EXCLUDED.recent_hire_date,
+    anniversary_date = EXCLUDED.anniversary_date,
+    scheduled_weekly_hour = EXCLUDED.scheduled_weekly_hour,
+    term_date = EXCLUDED.term_date,
+    tenure = EXCLUDED.tenure,
+    is_active = EXCLUDED.is_active,
+    is_rehired = EXCLUDED.is_rehired,
+    is_early_attrition = EXCLUDED.is_early_attrition,
+    loaded_at = EXCLUDED.loaded_at,
+    source_file = EXCLUDED.source_file;

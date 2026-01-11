@@ -1,11 +1,8 @@
-"""
-Pipeline Orchestrator - Runs the ELT process (Functional Style)
-"""
 import logging
 import sys
 from pathlib import Path
 from datetime import datetime
-from src.pipeline.db import connect_db
+from src.pipeline.db import connect_db, execute_sql_file
 from src.pipeline.extract import extract_employees, extract_timesheets
 from src.pipeline.load import load_to_bronze
 
@@ -38,13 +35,11 @@ def init_schema(schema_dir: Path) -> bool:
             logger.warning(f"No schema files found in {schema_dir}")
             return True  # Not an error if no files
         
-        with conn.cursor() as cur:
-            for sql_file in sql_files:
-                logger.info(f"Executing: {sql_file.name}")
-                with open(sql_file, 'r', encoding='utf-8') as f:
-                    cur.execute(f.read())
-                conn.commit()
-        
+        for sql_file in sql_files:
+            logger.info(f"Executing: {sql_file.name}")
+            execute_sql_file(conn, str(sql_file))
+
+        conn.commit()
         logger.info("Schema initialized")
         return True
         
@@ -133,7 +128,7 @@ def load_bronze_layer(data_dir: Path) -> bool:
             if not load_to_bronze("bronze.employees", headers, rows, emp_file.name):
                 all_success = False
             else:
-                logger.info(f"✓ Loaded {len(rows)} employee records")
+                logger.info(f"Loaded {len(rows)} employee records")
                 
         except Exception as e:
             logger.error(f"Employee load failed for {emp_file.name}: {e}")
@@ -152,7 +147,7 @@ def load_bronze_layer(data_dir: Path) -> bool:
             if not load_to_bronze("bronze.timesheets", headers, rows, ts_file.name):
                 all_success = False
             else:
-                logger.info(f"✓ Loaded {len(rows)} timesheet records")
+                logger.info(f"Loaded {len(rows)} timesheet records")
                 
         except Exception as e:
             logger.error(f"Timesheet load failed for {ts_file.name}: {e}")
@@ -175,18 +170,18 @@ def transform_bronze_to_silver(sql_dir: Path) -> bool:
             (sql_dir / "20_transform_timesheets_bronze_to_silver.sql", "Transform Timesheets"),
         ]
         
-        with conn.cursor() as cur:
-            for sql_file, description in sql_files:
-                if not sql_file.exists():
-                    logger.error(f"SQL file not found: {sql_file}")
-                    return False
-                
-                logger.info(f"Executing: {description}")
-                with open(sql_file, 'r', encoding='utf-8') as f:
-                    cur.execute(f.read())
-                conn.commit()
-                logger.info(f"✓ {description} complete")
+
+        for sql_file, description in sql_files:
+            if not sql_file.exists():
+                logger.error(f"SQL file not found: {sql_file}")
+                return False
+            
+            logger.info(f"Executing: {description}")
+            execute_sql_file(conn, str(sql_file))
+            logger.info(f"{description} complete")
         
+        conn.commit()
+        logger.info(" All Silver transformations committed successfully")     
         return True
         
     except Exception as e:
@@ -219,18 +214,17 @@ def transform_silver_to_gold(sql_dir: Path) -> bool:
             logger.info("No Gold transformations defined yet")
             return True
         
-        with conn.cursor() as cur:
-            for sql_file, description in sql_files:
-                if not sql_file.exists():
-                    logger.error(f"SQL file not found: {sql_file}")
-                    return False
-                
-                logger.info(f"Executing: {description}")
-                with open(sql_file, 'r', encoding='utf-8') as f:
-                    cur.execute(f.read())
-                conn.commit()
-                logger.info(f"✓ {description} complete")
-        
+        for sql_file, description in sql_files:
+            if not sql_file.exists():
+                logger.error(f"SQL file not found: {sql_file}")
+                return False
+            
+            logger.info(f"Executing: {description}")
+            execute_sql_file(conn, str(sql_file))
+            logger.info(f"{description} complete")
+
+        conn.commit()
+        logger.info(f"All Gold transformations committed successfully")
         return True
         
     except Exception as e:

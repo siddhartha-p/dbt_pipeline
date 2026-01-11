@@ -13,7 +13,8 @@ SELECT
         WHEN EXTRACT(ISODOW FROM datum) IN (6, 7) THEN TRUE
         ELSE FALSE
     END AS is_weekend,
-    FALSE AS is_holiday, -- Default to false, update manually later
+    FALSE AS is_holiday, 
     (datum = (DATE_TRUNC('MONTH', datum) + INTERVAL '1 MONTH - 1 day')::DATE) AS is_last_day_of_month
 FROM (SELECT '2025-01-01'::DATE + SEQUENCE.DAY AS datum
-      FROM GENERATE_SERIES(0, 730) AS SEQUENCE(DAY)) DQ;
+      FROM GENERATE_SERIES(0, 730) AS SEQUENCE(DAY)) DQ
+ON CONFLICT (date_key) DO NOTHING;

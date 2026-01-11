@@ -30,15 +30,15 @@ def execute_sql_file(connection, sql_file_path: str):
         with open(sql_file_path, 'r') as f:
             sql_script = f.read()
         
-        cursor = connection.cursor()
-        cursor.execute(sql_script)
-        connection.commit()
-        cursor.close()
+        statements = [stmt.strip() for stmt in sql_script.split(';') if stmt.strip()]
+
+        with connection.cursor() as cursor:
+            for statement in statements:
+                cursor.execute(statement)
         
         logger.info(f"Executed SQL file: {sql_file_path}")
         
     except Exception as e:
-        connection.rollback()
         logger.error(f"Failed to execute {sql_file_path}: {e}")
         raise
 
