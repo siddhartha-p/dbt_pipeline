@@ -79,11 +79,23 @@ casted_data as (
         source_file
     from replace_null_strings 
 )
-select * from casted_data 
+select 
+    distinct  on ( 
+        client_employee_id,
+        punch_apply_date,
+        punch_in_datetime
+        )
+    *
+ from casted_data 
 where punch_apply_date is not null 
     and punch_in_datetime is not null 
     and punch_out_datetime is not null
     and loaded_at>(select coalesce(max(loaded_at),'2000-01-01'::timestamp) from silver.timesheets)
+ORDER BY 
+    client_employee_id,
+    punch_apply_date,
+    punch_in_datetime,
+    loaded_at DESC 
 ON CONFLICT (client_employee_id, punch_apply_date, punch_in_datetime)
 DO UPDATE SET
     department_id = EXCLUDED.department_id,
