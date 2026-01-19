@@ -28,7 +28,15 @@ models:
         tests:
           - not_null
           - dbt_utils.accepted_range:
-            arguments:
               min_value: 0
               max_value: 24
               severity: warn
+
+  - name: stg_employees
+    description: Cleaned and validated employee master data
+    columns:
+      - name: client_employee_id
+        description: Unique employee identifier
+        tests:
+          - unique
+          - not_null
