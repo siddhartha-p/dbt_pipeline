@@ -1,0 +1,34 @@
+version: 2
+
+models:
+  - name: stg_timesheets
+    description: Cleaned and validated timesheet data
+    columns:
+      # - name: timesheet_key
+      #   description: Surrogate primary key
+      #   tests:
+      #     - unique
+      #     - not_null
+      
+      - name: client_employee_id
+        description: Employee identifier
+        tests:
+          - not_null
+          # - relationships:
+          #     to: ref('stg_employees')
+          #     field: client_employee_id
+      
+      - name: punch_apply_date
+        description: Date of work
+        tests:
+          - not_null
+      
+      - name: hours_worked
+        description: Hours worked
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+            arguments:
+              min_value: 0
+              max_value: 24
+              severity: warn

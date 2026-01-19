@@ -378,7 +378,23 @@ def main():
     #     logger.error("Transformtaion for gold to silver failed")
     #     sys.exit(1)
     
-    run_full_pipeline(truncate=True)
+    #run_full_pipeline(truncate=True)
+
+    base_dir = Path(__file__).resolve().parents[2]
+    schema_dir = base_dir / "sql" / "create_table_queries"
+    data_dir = base_dir / "data"
+    transform_dir = base_dir / "sql" /"transform_queries"
+
+    if not init_schema(schema_dir):
+        logger.error("Pipeline aborted: Schema initialization failed")
+        return False
+    
+
+    if not load_bronze_layer(data_dir):
+        logger.error("Pipeline failed: Bronze load incomplete")
+        return False
+
+
 
     sys.exit(0)
 

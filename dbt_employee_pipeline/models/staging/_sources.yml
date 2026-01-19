@@ -1,0 +1,16 @@
+version: 2
+
+sources:
+  - name: bronze
+    description: Raw data layer loaded from CSV files via Python pipeline
+    database: dbt_assessment
+    schema: bronze
+    tables:
+      - name: employees
+        description: Raw employee master data from CSV files
+        
+      - name: timesheets
+        description: Raw timesheet/attendance records from CSV files
+          
+      - name: processed_files
+        description: Tracking table to prevent duplicate file loads
