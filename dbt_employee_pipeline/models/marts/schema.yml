@@ -1,0 +1,238 @@
+version: 2
+
+models:
+  - name: dim_employees
+    description: "Dimension table containing employee master data with current status, tenure, and employment attributes"
+    columns:
+      - name: client_employee_id
+        description: "Unique identifier for each employee (business key)"
+        tests:
+          - unique
+          - not_null
+      
+      - name: fullname
+        description: "Employee's full name (concatenation of first, middle, and last name)"
+      
+      - name: work_email
+        description: "Employee's work email address"
+        tests:
+          - unique
+      
+      - name: dob
+        description: "Employee's date of birth"
+      
+      - name: years_of_experience
+        description: "Total years of professional experience"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: job_code
+        description: "Code representing the employee's job position"
+      
+      - name: job_title
+        description: "Employee's current job title"
+      
+      - name: organization_name
+        description: "Name of the organization/company"
+      
+      - name: department_name
+        description: "Employee's current department"
+      
+      - name: manager_employee_id
+        description: "Client employee ID of the employee's manager"
+        # tests:
+        #   - relationships:
+        #       to: ref('dim_employees')
+        #       field: client_employee_id
+        #       config:
+        #         where: "manager_employee_id IS NOT NULL"
+      
+      - name: job_start_date
+        description: "Date when employee started their current job/position"
+      
+      - name: hire_date
+        description: "Original hire date (first time hired by the company)"
+        tests:
+          - not_null
+      
+      - name: recent_hire_date
+        description: "Most recent hire date (same as hire_date unless rehired)"
+        tests:
+          - not_null
+      
+      - name: anniversary_date
+        description: "Employee's work anniversary date"
+      
+      - name: scheduled_weekly_hour
+        description: "Number of hours the employee is scheduled to work per week"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0 AND <= 168"
+      
+      - name: term_date
+        description: "Termination date (null if employee is active)"
+      
+      - name: tenure
+        description: "Employee's tenure in years (calculated from recent_hire_date to term_date or current_date)"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: is_active
+        description: "Boolean flag indicating if employee is currently active"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [true, false]
+      
+      - name: is_rehired
+        description: "Boolean flag indicating if employee was rehired (hire_date differs from recent_hire_date)"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [true, false]
+      
+      - name: is_early_attrition
+        description: "Boolean flag indicating if employee left within 180 days of recent hire date"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [true, false]
+      
+      - name: loaded_at
+        description: "Timestamp when the record was loaded into the data warehouse"
+        tests:
+          - not_null
+      
+      - name: source_file
+        description: "Source file name from which the employee data was loaded"
+  
+    tests:
+      - dbt_utils.expression_is_true:
+          expression: "hire_date <= recent_hire_date"
+          config:
+            error_if: ">10"
+            warn_if: ">0"
+      - dbt_utils.expression_is_true:
+          expression: "term_date IS NULL OR term_date >= recent_hire_date"
+          config:
+            error_if: ">0"
+  
+  - name: fact_attendance
+    description: "Fact table containing daily attendance metrics aggregated by employee, date, and department. Grain: one row per employee-date-department combination."
+    config:
+      materialized: incremental
+      incremental_strategy: delete+insert
+    
+    columns:
+      - name: client_employee_id
+        description: "Foreign key to dim_employees - identifier for the employee"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_employees')
+              field: client_employee_id
+      
+      - name: date_key
+        description: "Foreign key to dim_date in YYYYMMDD format - the date of attendance"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_date')
+              field: date_key
+      
+      - name: department_name
+        description: "Department where the work was performed on this date (can differ from home department for cross-department work)"
+        tests:
+          - not_null
+      
+      - name: home_department_name
+        description: "Employee's home/primary department assignment"
+      
+      - name: total_punches
+        description: "Total number of punch in/out pairs for the employee on this date in this department"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "> 0"
+      
+      - name: total_hours_worked
+        description: "Sum of hours worked across all punch pairs for the day in this department"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: first_punch_in
+        description: "Timestamp of the first punch-in of the day across all punches"
+        tests:
+          - not_null
+      
+      - name: last_punch_out
+        description: "Timestamp of the last punch-out of the day across all punches"
+        tests:
+          - not_null
+      
+      - name: late_arrival_count
+        description: "Count of punches where punch-in was more than 5 minutes after scheduled start time"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: early_departure_count
+        description: "Count of punches where punch-out was more than 5 minutes before scheduled end time"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: overtime_count
+        description: "Count of punches where duration exceeded scheduled duration by more than 5 minutes"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      
+      - name: loaded_at
+        description: "Timestamp of the most recent load for records in this aggregation"
+        tests:
+          - not_null
+      
+      - name: source_file
+        description: "Source file from which the timesheet data originated (most recent if multiple files)"
+    
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - client_employee_id
+            - date_key
+            - department_name
+      - dbt_utils.expression_is_true:
+          expression: "first_punch_in <= last_punch_out"
+          config:
+            error_if: ">0"
+      - dbt_utils.expression_is_true:
+          expression: "late_arrival_count <= total_punches"
+          config:
+            error_if: ">0"
+      - dbt_utils.expression_is_true:
+          expression: "early_departure_count <= total_punches"
+          config:
+            error_if: ">0"
+      - dbt_utils.expression_is_true:
+          expression: "overtime_count <= total_punches"
+          config:
+            error_if: ">0"
+    # tests:
+    #   - dbt_utils.expression_is_true:
+    #       expression: "hire_date <= recent_hire_date"
+    #       config:
+    #         error_if: ">10"
+    #         warn_if: ">0"
+    #   - dbt_utils.expression_is_true:
+    #       expression: "term_date IS NULL OR term_date >= recent_hire_date"
+    #       config:
+    #         error_if: ">0"
