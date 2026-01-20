@@ -226,13 +226,3 @@ models:
           expression: "overtime_count <= total_punches"
           config:
             error_if: ">0"
-    # tests:
-    #   - dbt_utils.expression_is_true:
-    #       expression: "hire_date <= recent_hire_date"
-    #       config:
-    #         error_if: ">10"
-    #         warn_if: ">0"
-    #   - dbt_utils.expression_is_true:
-    #       expression: "term_date IS NULL OR term_date >= recent_hire_date"
-    #       config:
-    #         error_if: ">0"
