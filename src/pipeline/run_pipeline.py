@@ -67,8 +67,8 @@ def truncate_all_layers() -> bool:
                     gold.fact_attendance,
                     gold.dim_employees,
                     gold.dim_date,
-                    silver.employees,
-                    silver.timesheets,
+                    silver.stg_employees,
+                    silver.stg_timesheets,
                     bronze.employees,
                     bronze.timesheets,
                     bronze.processed_files
