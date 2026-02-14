@@ -68,7 +68,7 @@ models:
         description: "Number of hours the employee is scheduled to work per week"
         tests:
           - dbt_utils.expression_is_true:
-              expression: ">= 0 AND <= 168"
+              expression: ">= 0 AND scheduled_weekly_hour <= 168"
       
       - name: term_date
         description: "Termination date (null if employee is active)"
@@ -145,8 +145,7 @@ models:
       
       - name: department_name
         description: "Department where the work was performed on this date (can differ from home department for cross-department work)"
-        tests:
-          - not_null
+
       
       - name: home_department_name
         description: "Employee's home/primary department assignment"

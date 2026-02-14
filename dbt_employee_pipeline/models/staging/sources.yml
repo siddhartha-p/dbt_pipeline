@@ -3,7 +3,6 @@ version: 2
 sources:
   - name: bronze
     description: Raw data layer loaded from CSV files via Python pipeline
-    database: dbt_assessment
     schema: bronze
     tables:
       - name: employees
