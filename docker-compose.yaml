@@ -335,6 +335,24 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+        
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://dbt_user:dbt_password@postgres:5432/employee_db
+      SECRET_KEY: ${SECRET_KEY:-change-this-secret-key-in-production}
+    volumes:
+      - ${AIRFLOW_PROJ_DIR:-.}/src:/app/src
+      - ${AIRFLOW_PROJ_DIR:-.}/api:/app/api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: always
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
 
 volumes:
   postgres-db-volume:

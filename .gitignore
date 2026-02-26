@@ -6,3 +6,4 @@ test.py
 **/test.py
 __pycache__/
 *.pyc
+AGENTS.md
